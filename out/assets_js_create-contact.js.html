@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: assets/js/create-contact.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: assets/js/create-contact.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>let createFormErrors = {
+  name: 0,
+  email: 0,
+  phone: 0,
+};
+
+/**
+ * Adds event listeners to the create contact form and add contact overlay elements.
+ * The submit event listener triggers the handleCreateContactSubmit function,
+ * while the click event listener on the overlay triggers the handleAddContactOverlayClick function.
+ */
+function eventListenerCreateContact() {
+  document
+    .getElementById("create-contact-form")
+    .addEventListener("submit", handleCreateContactSubmit);
+  document
+    .getElementById("add-contact-overlay")
+    .addEventListener("click", handleAddContactOverlayClick);
+}
+
+/**
+ * Handles the submit event for the create contact form.
+ * Prevents the default form submission behavior, validates the input fields,
+ * and creates a new contact if all fields are valid (no errors).
+ *
+ * @param {Event} event - The submit event object.
+ */
+function handleCreateContactSubmit(event) {
+  event.preventDefault();
+  validateCreateContactInputs();
+  if (
+    createFormErrors.name === 0 &amp;&amp;
+    createFormErrors.email === 0 &amp;&amp;
+    createFormErrors.phone === 0
+  ) {
+    createContact();
+  }
+}
+
+/**
+ * Validates the input fields in the create contact form.
+ * Checks the validity of the name, email, and phone fields,
+ * and displays appropriate validation error messages if the fields are invalid.
+ */
+function validateCreateContactInputs() {
+  checkCreateInputValidation("name", "Enter name &amp; surname.");
+  checkCreateInputValidation("email", "Enter a valid email address.");
+  checkCreateInputValidation(
+    "phone",
+    "Enter a valid phone number with country code."
+  );
+}
+
+/**
+ * Handles the click event for the add contact overlay.
+ * If the click target is not the overlay itself, the function returns early.
+ * Otherwise, it hides the add contact overlay.
+ *
+ * @param {Event} event - The click event object.
+ */
+function handleAddContactOverlayClick(event) {
+  if (event.target !== event.currentTarget) return;
+  hideAddContactOverlay();
+}
+
+/**
+ * Creates a new contact by gathering input values from the create contact form.
+ * If the email already exists, it displays a validation error.
+ * Otherwise, it proceeds to create a valid contact.
+ *
+ * @returns {Promise&lt;void>}
+ */
+async function createContact() {
+  let name = document.querySelector(
+    "#create-contact-form input[name = name]"
+  ).value;
+  let email = document.querySelector(
+    "#create-contact-form input[name = email]"
+  ).value;
+  let mobile = document.querySelector(
+    "#create-contact-form input[name = phone]"
+  ).value;
+  if (await isEmailExist(email)) {
+    showInputValidationError(
+      "#create-contact-form",
+      "email",
+      "Email already exists, please choose another!"
+    );
+  } else {
+    await createValidContact(name, mobile, email);
+  }
+}
+
+/**
+ * Creates a valid contact by gathering the contact data, posting it to the server,
+ * resetting the create contact form, rendering the updated contact list, hiding the add contact overlay,
+ * and displaying a success notification.
+ *
+ * @param {string} name - The name of the new contact.
+ * @param {string} mobile - The mobile number of the new contact.
+ * @param {string} email - The email address of the new contact.
+ * @returns {Promise&lt;void>}
+ */
+async function createValidContact(name, mobile, email) {
+  const data = gatherNewContactData(name, mobile, email);
+  await postData("users", data);
+  resetCreateContactForm();
+  renderContactList();
+  hideAddContactOverlay();
+  showNotification("Contact succesfully created");
+}
+
+/**
+ * Gathers the data for a new contact, including name, mobile, email, color, and profile image.
+ *
+ * @param {string} name - The name of the new contact.
+ * @param {string} mobile - The mobile number of the new contact.
+ * @param {string} email - The email address of the new contact.
+ * @returns {Object} - An object containing the gathered contact data.
+ */
+function gatherNewContactData(name, mobile, email) {
+  return {
+    name: name,
+    mobile: mobile,
+    email: email,
+    color: getRandomColor(),
+    profileImage: getProfileImage(name),
+  };
+}
+
+/**
+ * Resets the create contact form fields.
+ */
+function resetCreateContactForm() {
+  document.querySelector("#create-contact-form input[name = name]").value = "";
+  document.querySelector("#create-contact-form input[name = email]").value = "";
+  document.querySelector("#create-contact-form input[name = phone]").value = "";
+}
+
+/**
+ * Shows the add contact overlay.
+ */
+function showAddContactOverlay() {
+  document.getElementById("add-contact-overlay").style.zIndex = 999;
+  document.getElementById("add-contact-overlay").style.backgroundColor =
+    "rgb(0 0 0 / 30%)";
+  document.getElementById("add-contact-overlay-container").style.transform =
+    "translateX(0)";
+}
+
+/**
+ * Hides the add contact overlay.
+ */
+function hideAddContactOverlay() {
+  document.getElementById("add-contact-overlay").style.backgroundColor =
+    "rgb(0 0 0 / 0%)";
+  document.getElementById("add-contact-overlay-container").style.transform =
+    "translateX(200%)";
+  document.getElementById("add-contact-overlay").style.zIndex = -1;
+  resetCreateContactForm();
+  removeAllErrors();
+}
+
+/**
+ * Validates the input element specified by its name within the create contact form.
+ * If the input is invalid, it shows an error message and updates the error state in the `createFormErrors` object.
+ *
+ * @param {string} inputName - The name attribute of the input element to validate.
+ * @param {string} message - The validation error message to display if the input is invalid.
+ */
+function checkCreateInputValidation(inputName, message) {
+  let inputElement = document.querySelector(
+    `#create-contact-form input[name = ${inputName}]`
+  );
+  if (!inputElement.checkValidity()) {
+    showInputValidationError("#create-contact-form", inputName, message);
+    createFormErrors[inputName] = 1;
+  } else {
+    hideInputValidationError("#create-contact-form", inputName);
+    createFormErrors[inputName] = 0;
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#activateCloseSlideIn">activateCloseSlideIn</a></li><li><a href="global.html#addContact">addContact</a></li><li><a href="global.html#addDragQueenEventListeners">addDragQueenEventListeners</a></li><li><a href="global.html#addSubtask">addSubtask</a></li><li><a href="global.html#appendSubtaskToList">appendSubtaskToList</a></li><li><a href="global.html#categoryDropDown">categoryDropDown</a></li><li><a href="global.html#changeStatus">changeStatus</a></li><li><a href="global.html#checkAcceptPrivacyPolicyValidity">checkAcceptPrivacyPolicyValidity</a></li><li><a href="global.html#checkAdminLogin">checkAdminLogin</a></li><li><a href="global.html#checkAndShowConfirmPasswordInputValidationSignUpForm">checkAndShowConfirmPasswordInputValidationSignUpForm</a></li><li><a href="global.html#checkAndShowEmailInputValidationLoginForm">checkAndShowEmailInputValidationLoginForm</a></li><li><a href="global.html#checkAndShowEmailInputValidationSignUpForm">checkAndShowEmailInputValidationSignUpForm</a></li><li><a href="global.html#checkAndShowNameInputValidationSignUpForm">checkAndShowNameInputValidationSignUpForm</a></li><li><a href="global.html#checkAndShowPasswordInputValidationLoginForm">checkAndShowPasswordInputValidationLoginForm</a></li><li><a href="global.html#checkAndShowPasswordInputValidationSignUpForm">checkAndShowPasswordInputValidationSignUpForm</a></li><li><a href="global.html#checkAndShowPrivacyCheckboxValidationSignUpForm">checkAndShowPrivacyCheckboxValidationSignUpForm</a></li><li><a href="global.html#checkCreateInputValidation">checkCreateInputValidation</a></li><li><a href="global.html#checkEditFormValidation">checkEditFormValidation</a></li><li><a href="global.html#checkEditInputValidation">checkEditInputValidation</a></li><li><a href="global.html#checkGuestLogin">checkGuestLogin</a></li><li><a href="global.html#checkInputValidity">checkInputValidity</a></li><li><a href="global.html#checkLogin">checkLogin</a></li><li><a href="global.html#checkLoginButtonActivity">checkLoginButtonActivity</a></li><li><a href="global.html#checkLoginFormValidation">checkLoginFormValidation</a></li><li><a href="global.html#checkPageAuthorisation">checkPageAuthorisation</a></li><li><a href="global.html#checkPasswordAndConfirmPassword">checkPasswordAndConfirmPassword</a></li><li><a href="global.html#checkRequiredFields">checkRequiredFields</a></li><li><a href="global.html#checkSearchValue">checkSearchValue</a></li><li><a href="global.html#checkSignUpFormValidation">checkSignUpFormValidation</a></li><li><a href="global.html#checkSignupButtonActivity">checkSignupButtonActivity</a></li><li><a href="global.html#clearPlaceholder">clearPlaceholder</a></li><li><a href="global.html#clearSubtaskInput">clearSubtaskInput</a></li><li><a href="global.html#closeAddTask">closeAddTask</a></li><li><a href="global.html#closeSlideIn">closeSlideIn</a></li><li><a href="global.html#closeTaskDetail">closeTaskDetail</a></li><li><a href="global.html#commaForGreeting">commaForGreeting</a></li><li><a href="global.html#confirmDelete">confirmDelete</a></li><li><a href="global.html#confirmEdit">confirmEdit</a></li><li><a href="global.html#convertDateFormatWithDash">convertDateFormatWithDash</a></li><li><a href="global.html#convertToPasswordInput">convertToPasswordInput</a></li><li><a href="global.html#convertToTextInput">convertToTextInput</a></li><li><a href="global.html#createContact">createContact</a></li><li><a href="global.html#createEditInputField">createEditInputField</a></li><li><a href="global.html#createSaveButton">createSaveButton</a></li><li><a href="global.html#createSubtaskListItem">createSubtaskListItem</a></li><li><a href="global.html#createTask">createTask</a></li><li><a href="global.html#createTaskDataObject">createTaskDataObject</a></li><li><a href="global.html#createTaskHtml">createTaskHtml</a></li><li><a href="global.html#createValidContact">createValidContact</a></li><li><a href="global.html#deleteContact">deleteContact</a></li><li><a href="global.html#deleteContactFromEditForm">deleteContactFromEditForm</a></li><li><a href="global.html#deleteData">deleteData</a></li><li><a href="global.html#deleteSubtask">deleteSubtask</a></li><li><a href="global.html#deleteTaskData">deleteTaskData</a></li><li><a href="global.html#displayContactList">displayContactList</a></li><li><a href="global.html#drag">drag</a></li><li><a href="global.html#dragEnd">dragEnd</a></li><li><a href="global.html#dragstart">dragstart</a></li><li><a href="global.html#drop">drop</a></li><li><a href="global.html#editContact">editContact</a></li><li><a href="global.html#editFormEventListener">editFormEventListener</a></li><li><a href="global.html#editSubtask">editSubtask</a></li><li><a href="global.html#editTaskTemplate">editTaskTemplate</a></li><li><a href="global.html#editValidContact">editValidContact</a></li><li><a href="global.html#enableSubtaskEditing">enableSubtaskEditing</a></li><li><a href="global.html#eventListenerCloseAddTask">eventListenerCloseAddTask</a></li><li><a href="global.html#eventListenerCreateContact">eventListenerCreateContact</a></li><li><a href="global.html#eventListenerEditContact">eventListenerEditContact</a></li><li><a href="global.html#finalizeEdit">finalizeEdit</a></li><li><a href="global.html#findAdminByEmail">findAdminByEmail</a></li><li><a href="global.html#formatDate">formatDate</a></li><li><a href="global.html#gatherEditedContactData">gatherEditedContactData</a></li><li><a href="global.html#gatherNewContactData">gatherNewContactData</a></li><li><a href="global.html#gatherTaskData">gatherTaskData</a></li><li><a href="global.html#gatherTaskFormData">gatherTaskFormData</a></li><li><a href="global.html#generateSalt">generateSalt</a></li><li><a href="global.html#getAdminProfileImage">getAdminProfileImage</a></li><li><a href="global.html#getAssignedUsers">getAssignedUsers</a></li><li><a href="global.html#getAssigneesListTemplate">getAssigneesListTemplate</a></li><li><a href="global.html#getContactDetailTemplate">getContactDetailTemplate</a></li><li><a href="global.html#getData">getData</a></li><li><a href="global.html#getDataFromDatabase">getDataFromDatabase</a></li><li><a href="global.html#getDetailAssignedUsers">getDetailAssignedUsers</a></li><li><a href="global.html#getFirstLetters">getFirstLetters</a></li><li><a href="global.html#getGreeting">getGreeting</a></li><li><a href="global.html#getHeaderTemplate">getHeaderTemplate</a></li><li><a href="global.html#getInputValue">getInputValue</a></li><li><a href="global.html#getLetterGroupTemplate">getLetterGroupTemplate</a></li><li><a href="global.html#getNextOneHourTime">getNextOneHourTime</a></li><li><a href="global.html#getNextUrgentDeadline">getNextUrgentDeadline</a></li><li><a href="global.html#getPageName">getPageName</a></li><li><a href="global.html#getPriorityID">getPriorityID</a></li><li><a href="global.html#getProfileImage">getProfileImage</a></li><li><a href="global.html#getRandomColor">getRandomColor</a></li><li><a href="global.html#getResponsiveEditDeleteBtnTemplate">getResponsiveEditDeleteBtnTemplate</a></li><li><a href="global.html#getSidebarTemplate">getSidebarTemplate</a></li><li><a href="global.html#getSlideInTemplate">getSlideInTemplate</a></li><li><a href="global.html#getSubtaskInput">getSubtaskInput</a></li><li><a href="global.html#getSubtaskListItemTemplate">getSubtaskListItemTemplate</a></li><li><a href="global.html#getSubtasks">getSubtasks</a></li><li><a href="global.html#getTasksByStatus">getTasksByStatus</a></li><li><a href="global.html#getUrgentTasksAmount">getUrgentTasksAmount</a></li><li><a href="global.html#getUserContactListTemplate">getUserContactListTemplate</a></li><li><a href="global.html#goBack">goBack</a></li><li><a href="global.html#guestLogin">guestLogin</a></li><li><a href="global.html#handleAddContactOverlayClick">handleAddContactOverlayClick</a></li><li><a href="global.html#handleAssigneeChange">handleAssigneeChange</a></li><li><a href="global.html#handleCreateContactSubmit">handleCreateContactSubmit</a></li><li><a href="global.html#handleDragEnter">handleDragEnter</a></li><li><a href="global.html#handleDragLeave">handleDragLeave</a></li><li><a href="global.html#handleDragOver">handleDragOver</a></li><li><a href="global.html#handleEditContactOverlayClick">handleEditContactOverlayClick</a></li><li><a href="global.html#handleEditContactSubmit">handleEditContactSubmit</a></li><li><a href="global.html#handleEditFormSubmit">handleEditFormSubmit</a></li><li><a href="global.html#handleSaveOnEnter">handleSaveOnEnter</a></li><li><a href="global.html#handleSubtaskInput">handleSubtaskInput</a></li><li><a href="global.html#hashingPassword">hashingPassword</a></li><li><a href="global.html#hideAddContactOverlay">hideAddContactOverlay</a></li><li><a href="global.html#hideDeleteConfirm">hideDeleteConfirm</a></li><li><a href="global.html#hideEditContactOverlay">hideEditContactOverlay</a></li><li><a href="global.html#hideEditTaskShowDetailView">hideEditTaskShowDetailView</a></li><li><a href="global.html#hideErrorMessages">hideErrorMessages</a></li><li><a href="global.html#hideInputValidation">hideInputValidation</a></li><li><a href="global.html#hideInputValidationError">hideInputValidationError</a></li><li><a href="global.html#initContactDropdownList">initContactDropdownList</a></li><li><a href="global.html#initDateInput">initDateInput</a></li><li><a href="global.html#initEventListenerAddTask">initEventListenerAddTask</a></li><li><a href="global.html#initFormFieldListeners">initFormFieldListeners</a></li><li><a href="global.html#initLogin">initLogin</a></li><li><a href="global.html#initLoginSignupFunctions">initLoginSignupFunctions</a></li><li><a href="global.html#initSignup">initSignup</a></li><li><a href="global.html#initSubtaskFunctions">initSubtaskFunctions</a></li><li><a href="global.html#initializeTaskForm">initializeTaskForm</a></li><li><a href="global.html#isAdminLogin">isAdminLogin</a></li><li><a href="global.html#isEmailExist">isEmailExist</a></li><li><a href="global.html#isGuestLogin">isGuestLogin</a></li><li><a href="global.html#isMoveFromLoginPage">isMoveFromLoginPage</a></li><li><a href="global.html#loadDropTargets">loadDropTargets</a></li><li><a href="global.html#loadTasksFromDatabase">loadTasksFromDatabase</a></li><li><a href="global.html#loadTemplates">loadTemplates</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#loginFormEvent">loginFormEvent</a></li><li><a href="global.html#logoAnimation">logoAnimation</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#markSubstaskAsDone">markSubstaskAsDone</a></li><li><a href="global.html#markSubtaskAsNotDone">markSubtaskAsNotDone</a></li><li><a href="global.html#openAddTask">openAddTask</a></li><li><a href="global.html#openEditContactModal">openEditContactModal</a></li><li><a href="global.html#openEditTaskForm">openEditTaskForm</a></li><li><a href="global.html#openHeaderProfileInfo">openHeaderProfileInfo</a></li><li><a href="global.html#openMoveTaskDropdown">openMoveTaskDropdown</a></li><li><a href="global.html#openSlideIn">openSlideIn</a></li><li><a href="global.html#openTaskDetail">openTaskDetail</a></li><li><a href="global.html#postData">postData</a></li><li><a href="global.html#putData">putData</a></li><li><a href="global.html#randomIntFromInterval">randomIntFromInterval</a></li><li><a href="global.html#removeAllErrors">removeAllErrors</a></li><li><a href="global.html#removeContact">removeContact</a></li><li><a href="global.html#removeContactFromTasks">removeContactFromTasks</a></li><li><a href="global.html#removeInputErrors">removeInputErrors</a></li><li><a href="global.html#removeResponsiveEditAfterDelete">removeResponsiveEditAfterDelete</a></li><li><a href="global.html#renderAddTaskData">renderAddTaskData</a></li><li><a href="global.html#renderAllBoards">renderAllBoards</a></li><li><a href="global.html#renderAllTasksAmount">renderAllTasksAmount</a></li><li><a href="global.html#renderBoardForNewTask">renderBoardForNewTask</a></li><li><a href="global.html#renderBoards">renderBoards</a></li><li><a href="global.html#renderBoardsByStatus">renderBoardsByStatus</a></li><li><a href="global.html#renderCategories">renderCategories</a></li><li><a href="global.html#renderContactDetail">renderContactDetail</a></li><li><a href="global.html#renderContactList">renderContactList</a></li><li><a href="global.html#renderContacts">renderContacts</a></li><li><a href="global.html#renderResponsiveEditButtons">renderResponsiveEditButtons</a></li><li><a href="global.html#renderSidebarHeader">renderSidebarHeader</a></li><li><a href="global.html#renderSubtasks">renderSubtasks</a></li><li><a href="global.html#renderSummaryData">renderSummaryData</a></li><li><a href="global.html#renderTaskAfterCreateTask">renderTaskAfterCreateTask</a></li><li><a href="global.html#renderTaskContributors">renderTaskContributors</a></li><li><a href="global.html#renderTasks">renderTasks</a></li><li><a href="global.html#renderTasksAmountByStatus">renderTasksAmountByStatus</a></li><li><a href="global.html#renderTasksThatExist">renderTasksThatExist</a></li><li><a href="global.html#renderUrgentTasks">renderUrgentTasks</a></li><li><a href="global.html#resetAddTask">resetAddTask</a></li><li><a href="global.html#resetAdditionalElements">resetAdditionalElements</a></li><li><a href="global.html#resetCreateContactForm">resetCreateContactForm</a></li><li><a href="global.html#resetFormInputs">resetFormInputs</a></li><li><a href="global.html#resetPasswordIcon">resetPasswordIcon</a></li><li><a href="global.html#resetSubtaskInput">resetSubtaskInput</a></li><li><a href="global.html#saveCurrentPage">saveCurrentPage</a></li><li><a href="global.html#saveSubtaskEdit">saveSubtaskEdit</a></li><li><a href="global.html#search">search</a></li><li><a href="global.html#selectPrio">selectPrio</a></li><li><a href="global.html#setGreeting">setGreeting</a></li><li><a href="global.html#setGreetingScreenVisibility">setGreetingScreenVisibility</a></li><li><a href="global.html#setPlaceholder">setPlaceholder</a></li><li><a href="global.html#setupClearButton">setupClearButton</a></li><li><a href="global.html#showAcceptPrivacyPolicyValidity">showAcceptPrivacyPolicyValidity</a></li><li><a href="global.html#showAddContactOverlay">showAddContactOverlay</a></li><li><a href="global.html#showAdminName">showAdminName</a></li><li><a href="global.html#showDeleteConfirm">showDeleteConfirm</a></li><li><a href="global.html#showEditContactOverlay">showEditContactOverlay</a></li><li><a href="global.html#showFeedbackOverlay">showFeedbackOverlay</a></li><li><a href="global.html#showGreetingScreen">showGreetingScreen</a></li><li><a href="global.html#showInputValidation">showInputValidation</a></li><li><a href="global.html#showInputValidationError">showInputValidationError</a></li><li><a href="global.html#showLoginError">showLoginError</a></li><li><a href="global.html#showLoginForm">showLoginForm</a></li><li><a href="global.html#showNotification">showNotification</a></li><li><a href="global.html#showPasswordVisibilityIcon">showPasswordVisibilityIcon</a></li><li><a href="global.html#showSignupForm">showSignupForm</a></li><li><a href="global.html#signUpFormEvent">signUpFormEvent</a></li><li><a href="global.html#signup">signup</a></li><li><a href="global.html#storeLoginData">storeLoginData</a></li><li><a href="global.html#styleLabel">styleLabel</a></li><li><a href="global.html#subTaskTemplate">subTaskTemplate</a></li><li><a href="global.html#taskContributorTemplate">taskContributorTemplate</a></li><li><a href="global.html#taskDetailTemplate">taskDetailTemplate</a></li><li><a href="global.html#taskTemplate">taskTemplate</a></li><li><a href="global.html#toggleButtonStatus">toggleButtonStatus</a></li><li><a href="global.html#toggleButtonVisibility">toggleButtonVisibility</a></li><li><a href="global.html#toggleContactDropdown">toggleContactDropdown</a></li><li><a href="global.html#toggleCreateTaskButton">toggleCreateTaskButton</a></li><li><a href="global.html#toggleEditButtonVisibility">toggleEditButtonVisibility</a></li><li><a href="global.html#togglePasswordVisible">togglePasswordVisible</a></li><li><a href="global.html#toggleResponsiveVisibilityContact">toggleResponsiveVisibilityContact</a></li><li><a href="global.html#toggleSubtask">toggleSubtask</a></li><li><a href="global.html#typePassword">typePassword</a></li><li><a href="global.html#updateActiveStateContactList">updateActiveStateContactList</a></li><li><a href="global.html#updateActiveStateNavLink">updateActiveStateNavLink</a></li><li><a href="global.html#updateAssignedContacts">updateAssignedContacts</a></li><li><a href="global.html#updateTaskData">updateTaskData</a></li><li><a href="global.html#updateTaskDataForSubtaskStatusChange">updateTaskDataForSubtaskStatusChange</a></li><li><a href="global.html#validateCreateContactInputs">validateCreateContactInputs</a></li><li><a href="global.html#validateEditContactInputs">validateEditContactInputs</a></li><li><a href="global.html#validateInputValidity">validateInputValidity</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Wed Dec 18 2024 13:01:03 GMT+0100 (Mitteleuropäische Normalzeit)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

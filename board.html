@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban-Board | JOIN</title>
+    <link rel="shortcut icon" href="./assets/img/JoinLogo.svg" type="image/x-icon">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./assets/css/icons/icons.css">
+    <link rel="stylesheet" href="./responsive.css">
+    <link rel="stylesheet" href="./assets/css/board.css">
+    <link rel="stylesheet" href="./assets/css/board-scrollbars.css">
+    <link rel="stylesheet" href="./assets/css/task-detail-edit.css">
+    <link rel="stylesheet" href="./assets/css/addTask.css">
+    <link rel="stylesheet" href="./assets/css/assignees-subtasks.css">
+    <link rel="stylesheet" href="./assets/css/addTask-responsive.css">
+    <link rel="stylesheet" href="./assets/css/board-responsive.css">
+    <script src="./assets/js/check-login.js"></script>
+    <script src="script.js"></script>
+    <script src="./assets/js/firebase-connect.js"></script>
+    <script src="./assets/js/board.js"></script>
+    <script src="./assets/js/dragging.js"></script>
+    <script src="./assets/js/task-view.js"></script>
+    <script src="./assets/js/task-view-templates.js"></script>
+    <script src="./assets/js/task-view-subtasks.js"></script>
+    <script src="./assets/js/move-task.js"></script>
+    <script src="./assets/js/helper-functions.js"></script>
+    <script src="./assets/js/addTask.js"></script>
+    <script src="./assets/js/addSubtask.js"></script>
+    <script src="./assets/js/createTask.js"></script>
+</head>
+
+<body
+    onload="renderSidebarHeader(); updateActiveStateNavLink('sidebar-nav-board'); renderAllBoards(); loadDropTargets(); initEventListenerAddTask(); renderAddTaskData(); setPlaceholder('#add-task-form');">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+    </aside>
+
+    <!-- Main Content Bereich -->
+    <div class="container">
+        <!-- HEADER -->
+        <header id="header" class="header-wrapper">
+        </header>
+
+        <main class="main">
+            <section class="board-header">
+                <div class="left-board-header">
+                    <h1>Board </h1>
+                    <button class="icon-add media-query" onclick="openAddTask('todo')">
+                    </button>
+                </div>
+                <div class="right-board-header">
+                    <label class="search-label">
+                        <input type="text" name="search" placeholder="Find Task" onkeyup="search(this.value)">
+                        <span></span>
+                        <div class="icon icon-search"></div>
+                    </label>
+                    <button class="mobile-d-none" onclick="openAddTask('todo')">Add task</button>
+                </div>
+            </section>
+
+            <!-- Board columns -->
+            <section class="board-middle">
+                <div class="boards">
+                    <div class="board-title">
+                        <h3>To do</h3>
+                        <div class="icon icon-add" onclick="openAddTask('todo')"></div>
+                    </div>
+                    <div class="board-tasks drop-target" id="todo-tasks" title="To do" ondrop="drop(event, 'todo')">
+                    </div>
+                </div>
+                <div class="boards">
+                    <div class="board-title">
+                        <h3>In progress</h3>
+                        <div class="icon icon-add" onclick="openAddTask('progress')"></div>
+                    </div>
+                    <div class="board-tasks drop-target" id="progress-tasks" title="In progress"
+                        ondrop="drop(event, 'progress')">
+                    </div>
+                </div>
+                <div class="boards">
+                    <div class="board-title">
+                        <h3>Await feedback</h3>
+                        <div class="icon icon-add" onclick="openAddTask('await-feedback')"></div>
+                    </div>
+                    <div class="board-tasks drop-target" id="await-feedback-tasks" title="Await feedback"
+                        ondrop="drop(event, 'await-feedback')">
+                    </div>
+                </div>
+                <div class="boards">
+                    <div class="board-title">
+                        <h3>Done</h3>
+                    </div>
+                    <div class="board-tasks drop-target" id="done-tasks" title="Done" ondrop="drop(event, 'done')">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Task Detailview Overlay -->
+            <div class="overlay d-none" id="overlay" onclick="closeTaskDetail()">
+                <div class="task-detail" id="task-detail" onclick="event.stopPropagation();">
+
+                </div>
+                <div class="edit-task d-none" id="edit-task" onclick="event.stopPropagation();">
+
+                </div>
+            </div>
+
+            <!-- Add Task Overlay -->
+            <div id="add-task-overlay" class="add-task-overlay-wrapper">
+                <div id="add-task-container" class="add-task-container">
+                    <span class="close-add-task icon-close" onclick="closeAddTask(); resetAddTask()"></span>
+                    <h2 id="add-task-title">Add Task</h2>
+
+                    <form id="add-task-form" class="add-task-form" novalidate>
+                        <div class="form-row">
+                            <!-- Left column -->
+                            <div class="form-column left">
+                                <label for="title">
+                                    <div>Title<span class="required">*</span></div>
+                                    <input type="text" id="title" name="title" placeholder="Enter a title" required>
+                                    <span class="title-error error d-none"></span>
+                                </label>
+
+                                <label for="description">
+                                    <div>Description</div>
+                                    <textarea id="description" name="description" rows="4"
+                                        placeholder="Enter a Description"></textarea>
+                                </label>
+
+                                <label for="assignees" class="assign-label">
+                                    <div>
+                                        Assigned to
+                                    </div>
+                                    <div>
+                                        <input type="search" name="assignees" id="assignees"
+                                            placeholder="Select contacts to assign"
+                                            onclick="toggleContactDropdown('#add-task-form')">
+                                        <div id="assignees-list" class="assignees-list d-none"></div>
+                                        <div id="assigned-to" class="assigned-to"></div>
+                                    </div>
+                                </label>
+
+                            </div>
+
+                            <!-- Right column -->
+                            <div class="form-column right">
+                                <!-- due date -->
+                                <label for="due-date" class="date-label">
+                                    <div>Due date<span class="required">*</span></div>
+                                    <input type="date" class="picker" id="due-date" name="due-date"
+                                        onfocus="clearPlaceholder('#add-task-form')"
+                                        onblur="setPlaceholder('#add-task-form')"
+                                        onchange="formatDate('#add-task-form')" required>
+                                    <span class="due-date-error error d-none"></span>
+                                </label>
+
+                                <!-- priority -->
+                                <label>
+                                    <div>Prio</div>
+                                    <div class="prio-options">
+                                        <div class="prio-btn urgent"
+                                            onclick="selectPrio('#add-task-form', 'urgent', '-O9M0Iky4rEYMLq5JwoZ')">
+                                            Urgent<span class="icon-urgent"></span>
+                                        </div>
+                                        <div class="prio-btn medium active"
+                                            onclick="selectPrio('#add-task-form', 'medium', '-O9M0Iky4rEYMLq5Jwo_')">
+                                            Medium<span class="icon-medium"></span>
+                                        </div>
+                                        <div class="prio-btn low"
+                                            onclick="selectPrio('#add-task-form', 'low', '-O9M0IlWMv7MvM-vtcJ-')">
+                                            Low <span class="icon-low"></span>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="selectedPrio" name="prio" value="-O9M0Iky4rEYMLq5Jwo_">
+                                </label>
+
+                                <!-- category -->
+                                <label for="category" class="category-label">
+                                    <div>Category<span class="required">*</span></div>
+                                    <select id="category" name="category" placeholder="Select task category"
+                                        onclick="categoryDropDown();" required>
+                                    </select>
+                                    <span class="category-error error d-none"></span>
+                                </label>
+
+                                <!-- subtasks -->
+                                <label for="subtasks">
+                                    <div>Subtasks</div>
+                                    <div class="subtask-row">
+                                        <input type="text" id="subtasks" name="subtasks" placeholder="Add new subtask">
+                                        <div class="subtask-buttons">
+                                            <button type="button" class="clear-subtask-btn icon-close"
+                                                onclick="clearSubtaskInput('#add-task-form')"></button>
+                                            <button type="button" class="add-subtask-btn icon-add"
+                                                onclick="addSubtask('#add-task-form')"></button>
+                                        </div>
+                                    </div>
+                                    <ul id="subtask-list" class="subtask-list">
+                                        <!-- Dynamic subtask list -->
+                                    </ul>
+
+                                    <span class="required-text mobile"><span class="required">*</span>This field is
+                                        required</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <span class="required-text desktop">
+                                <span class="required">*</span>This field is required
+                            </span>
+                            <div class="add-task-button-wrapper">
+                                <!-- Clear Button -->
+                                <button type="button" class="cancel-btn" onclick="closeAddTask(); resetAddTask()">
+                                    Cancel<span class="icon-close"></span>
+                                </button>
+                                <!-- Create Button -->
+                                <button id="createTaskBtn" type="submit" class="create-task-btn" disabled>
+                                    Create Task<span class="icon-check"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="feedback-overlay" class="feedback-overlay">Task added to board<img src="./assets/buttons/Board.svg"
+            alt="Board"></div>
+</body>
+
+</html>
